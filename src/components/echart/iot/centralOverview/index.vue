@@ -45,7 +45,11 @@
 </template>
 
 <script>
-import { getDeviceStatistics } from "@/api/iot";
+import {
+  getDeviceStatistics,
+  getDeviceOperationLogs,
+  getDeviceAlarmLogs,
+} from "@/api/iot";
 
 export default {
   data() {
@@ -98,20 +102,7 @@ export default {
       ],
       logConfig: {
         header: ["时间", "事件类型", "详情"],
-        data: [
-          ["2023-06-15 08:30:45", "设备上线", "ID:SN23785 摄像头已连接"],
-          [
-            "2023-06-15 08:32:12",
-            "数据上报",
-            "ID:SN12657 温度传感器数据上报成功",
-          ],
-          ["2023-06-15 08:35:30", "系统通知", "系统例行维护完成"],
-          ["2023-06-15 08:40:22", "设备离线", "ID:SN45692 网关连接断开"],
-          ["2023-06-15 08:42:18", "告警触发", "ID:SN78912 温度过高告警"],
-          ["2023-06-15 08:45:56", "告警解除", "ID:SN78912 温度恢复正常"],
-          ["2023-06-15 08:50:33", "设备上线", "ID:SN45692 网关重新连接"],
-          ["2023-06-15 08:55:10", "固件更新", "ID:SN23785 摄像头固件更新完成"],
-        ],
+        data: [], // 初始化为空数组，将通过API获取数据
         rowNum: 5,
         align: ["center", "center", "left"],
         columnWidth: [150, 100],
@@ -120,17 +111,11 @@ export default {
         carousel: "single",
       },
       alarmConfig: {
-        header: ["时间", "设备ID", "告警级别", "告警信息"],
-        data: [
-          ["08:42:18", "SN78912", "严重", "温度过高(85°C)"],
-          ["08:40:22", "SN45692", "中等", "网关连接断开"],
-          ["08:38:45", "SN34567", "轻微", "信号强度弱"],
-          ["08:35:12", "SN56789", "严重", "烟雾浓度超标"],
-          ["08:30:56", "SN67890", "中等", "电池电量低(15%)"],
-        ],
+        header: ["时间", "设备ID", "告警信息"],
+        data: [], // 初始化为空数组，将通过API获取数据
         rowNum: 5,
-        align: ["center", "center", "center", "left"],
-        columnWidth: [80, 100, 80],
+        align: ["center", "center", "left"],
+        columnWidth: [80, 180, 80], // 将设备ID列的宽度从100增加到180
         carousel: "single",
       },
     };
@@ -138,10 +123,14 @@ export default {
   created() {
     // 初始加载数据
     this.fetchDeviceStatistics();
+    this.fetchDeviceOperationLogs();
+    this.fetchDeviceAlarmLogs(); // 添加获取告警日志的调用
 
     // 设置定时刷新（每30秒刷新一次）
     this.timer = setInterval(() => {
       this.fetchDeviceStatistics();
+      this.fetchDeviceOperationLogs();
+      this.fetchDeviceAlarmLogs(); // 添加定时刷新告警日志
     }, 30000);
   },
   beforeDestroy() {
@@ -193,6 +182,72 @@ export default {
         .catch((error) => {
           console.error("获取设备统计数据出错:", error);
         });
+    },
+    // 获取设备操作日志
+    fetchDeviceOperationLogs() {
+      getDeviceOperationLogs(1, 10) // 固定获取第一页，每页10条数据
+        .then((res) => {
+          if (res.code === 0 && res.data) {
+            // 处理返回的日志数据
+            const logData = res.data.list.map((item) => [
+              item.createTime, // 时间
+              item.type === 1 ? "设备操作" : "告警信息", // 事件类型，根据实际类型值调整
+              item.content, // 详情
+            ]);
+
+            // 更新日志配置
+            this.logConfig = {
+              ...this.logConfig,
+              data: logData,
+            };
+          } else {
+            console.error("获取设备操作日志失败:", res.msg || "未知错误");
+          }
+        })
+        .catch((error) => {
+          console.error("获取设备操作日志出错:", error);
+        });
+    },
+    // 获取设备告警日志
+    fetchDeviceAlarmLogs() {
+      getDeviceAlarmLogs(1, 10) // 固定获取第一页，每页10条数据
+        .then((res) => {
+          if (res.code === 0 && res.data) {
+            // 处理返回的告警数据
+            const alarmData = res.data.list.map((item) => [
+              item.createTime.substring(11, 19), // 只显示时间部分
+              item.deviceId, // 设备ID
+              // this.getAlarmLevelText(item.type), // 告警级别，根据类型确定
+              item.content, // 告警信息
+            ]);
+
+            // 更新告警配置
+            this.alarmConfig = {
+              ...this.alarmConfig,
+              data: alarmData,
+            };
+          } else {
+            console.error("获取设备告警日志失败:", res.msg || "未知错误");
+          }
+        })
+        .catch((error) => {
+          console.error("获取设备告警日志出错:", error);
+        });
+    },
+
+    // 根据告警类型获取告警级别文本
+    getAlarmLevelText(type) {
+      // 根据实际业务逻辑调整
+      switch (type) {
+        case 1:
+          return "轻微";
+        case 2:
+          return "中等";
+        case 3:
+          return "严重";
+        default:
+          return "未知";
+      }
     },
   },
   mounted() {
