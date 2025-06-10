@@ -37,7 +37,7 @@ export default {
             },
           },
           legend: {
-            data: ["在线", "离线", "故障"],
+            data: ["在线", "离线"],
             textStyle: {
               color: "#fff",
             },
@@ -100,18 +100,6 @@ export default {
                 color: "#9fe6b8",
               },
               data: newData.deviceStatus.offline,
-            },
-            {
-              name: "故障",
-              type: "bar",
-              stack: "设备",
-              emphasis: {
-                focus: "series",
-              },
-              itemStyle: {
-                color: "#ff9800",
-              },
-              data: newData.deviceStatus.fault,
             },
           ],
         };

@@ -1,12 +1,15 @@
-const path = require('path')
-const resolve = dir => {
-  return path.join(__dirname, dir)
-}
+const path = require("path");
+const resolve = (dir) => {
+  return path.join(__dirname, dir);
+};
 module.exports = {
-  publicPath: './',
+  publicPath: "./",
   transpileDependencies: [],
-  chainWebpack: config => {
-    config.resolve.alias
-      .set('_c', resolve('src/components')) // key,value自行定义，比如.set('@@', resolve('src/components'))
+  chainWebpack: (config) => {
+    config.resolve.alias.set("_c", resolve("src/components")); // key,value自行定义，比如.set('@@', resolve('src/components'))
   },
-}
+  devServer: {
+    port: 8022,
+    open: true,
+  },
+};

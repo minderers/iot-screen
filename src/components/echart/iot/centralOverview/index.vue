@@ -45,6 +45,8 @@
 </template>
 
 <script>
+import { getDeviceStatistics } from "@/api/iot";
+
 export default {
   data() {
     return {
@@ -54,7 +56,7 @@ export default {
           title: "设备总数",
           class: "total",
           config: {
-            number: [620],
+            number: [0],
             toFixed: 0,
             textAlign: "center",
             content: "{nt}",
@@ -68,7 +70,7 @@ export default {
           title: "在线设备",
           class: "online",
           config: {
-            number: [568],
+            number: [0],
             toFixed: 0,
             textAlign: "center",
             content: "{nt}",
@@ -82,7 +84,7 @@ export default {
           title: "离线设备",
           class: "offline",
           config: {
-            number: [42],
+            number: [0],
             toFixed: 0,
             textAlign: "center",
             content: "{nt}",
@@ -92,20 +94,7 @@ export default {
             },
           },
         },
-        {
-          title: "告警设备",
-          class: "alarm",
-          config: {
-            number: [10],
-            toFixed: 0,
-            textAlign: "center",
-            content: "{nt}",
-            style: {
-              fontSize: 28,
-              fill: "#ff9800",
-            },
-          },
-        },
+        // 告警设备项已移除
       ],
       logConfig: {
         header: ["时间", "事件类型", "详情"],
@@ -146,11 +135,73 @@ export default {
       },
     };
   },
+  created() {
+    // 初始加载数据
+    this.fetchDeviceStatistics();
+
+    // 设置定时刷新（每30秒刷新一次）
+    this.timer = setInterval(() => {
+      this.fetchDeviceStatistics();
+    }, 30000);
+  },
+  beforeDestroy() {
+    // 组件销毁前清除定时器
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
+  },
+  methods: {
+    // 获取设备统计数据
+    // 获取设备统计数据
+    fetchDeviceStatistics() {
+      console.log("开始请求设备统计数据");
+      console.log(
+        "请求URL:",
+        process.env.VUE_APP_BASE_API + "/iot/device/statistics"
+      );
+
+      getDeviceStatistics()
+        .then((res) => {
+          console.log("设备统计数据响应:", res);
+          if (res.code === 0 && res.data) {
+            // 创建新的配置对象，避免引用问题
+            const deviceStatsTemp = JSON.parse(
+              JSON.stringify(this.deviceStats)
+            );
+
+            // 更新设备总数
+            deviceStatsTemp[0].config.number = [Number(res.data.totalCount)];
+
+            // 更新在线设备数
+            deviceStatsTemp[1].config.number = [Number(res.data.onlineCount)];
+
+            // 更新离线设备数
+            deviceStatsTemp[2].config.number = [Number(res.data.offlineCount)];
+
+            // 整体替换deviceStats，触发视图更新
+            this.deviceStats = deviceStatsTemp;
+
+            // 打印更新后的数据，确认数据已更新
+            console.log("更新后的设备数据:", this.deviceStats);
+
+            // 强制重新渲染
+            this.$forceUpdate();
+          } else {
+            console.error("获取设备统计数据失败:", res.msg || "未知错误");
+          }
+        })
+        .catch((error) => {
+          console.error("获取设备统计数据出错:", error);
+        });
+    },
+  },
   mounted() {
     // 模拟告警闪烁效果
     setInterval(() => {
       this.hasActiveAlarm = !this.hasActiveAlarm;
     }, 1000);
+
+    // 测试代码已移除
   },
 };
 </script>
